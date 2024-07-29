@@ -1,4 +1,11 @@
-﻿using NLua;
+﻿using FFXIVClientStructs.FFXIV.Client.Game;
+using FFXIVClientStructs.FFXIV.Client.Game.Event;
+using FFXIVClientStructs.FFXIV.Client.Game.Fate;
+using FFXIVClientStructs.FFXIV.Client.Game.UI;
+using FFXIVClientStructs.FFXIV.Client.Graphics.Environment;
+using FFXIVClientStructs.FFXIV.Client.System.Framework;
+using FFXIVClientStructs.FFXIV.Client.UI.Agent;
+using NLua;
 using SomethingNeedDoing.Exceptions;
 using SomethingNeedDoing.Grammar;
 using SomethingNeedDoing.Grammar.Commands;
@@ -7,6 +14,7 @@ using SomethingNeedDoing.Misc.Commands;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace SomethingNeedDoing.Misc;
@@ -205,7 +213,7 @@ internal partial class ActiveMacro : IDisposable
         return StepIndex < 0 || StepIndex >= Steps.Count ? null : Steps[StepIndex];
     }
 
-    private void InitLuaScript()
+    private unsafe void InitLuaScript()
     {
         var script = Node.Contents
             .Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None)
@@ -261,6 +269,23 @@ internal partial class ActiveMacro : IDisposable
         RegisterClassMethods(lua, WorldStateCommands.Instance);
         RegisterClassMethods(lua, InternalCommands.Instance);
         #endregion
+
+        foreach (var p in typeof(Svc).GetProperties())
+        {
+            Svc.Log.Debug($"Adding Dalamud service: {p.Name}");
+            lua[p.Name] = p.GetValue(typeof(Svc));
+        }
+
+        lua["ActionManager"] = (ActionManager)Marshal.PtrToStructure((nint)ActionManager.Instance(), typeof(ActionManager))!;
+        lua["AgentMap"] = (AgentMap)Marshal.PtrToStructure((nint)AgentMap.Instance(), typeof(AgentMap))!;
+        lua["EnvManager"] = (EnvManager)Marshal.PtrToStructure((nint)EnvManager.Instance(), typeof(EnvManager))!;
+        lua["EventFramework"] = (EventFramework)Marshal.PtrToStructure((nint)EventFramework.Instance(), typeof(EventFramework))!;
+        lua["FateManager"] = (FateManager)Marshal.PtrToStructure((nint)FateManager.Instance(), typeof(FateManager))!;
+        lua["Framework"] = (Framework)Marshal.PtrToStructure((nint)Framework.Instance(), typeof(Framework))!;
+        lua["InventoryManager"] = (InventoryManager)Marshal.PtrToStructure((nint)InventoryManager.Instance(), typeof(InventoryManager))!;
+        lua["PlayerState"] = (PlayerState)Marshal.PtrToStructure((nint)PlayerState.Instance(), typeof(PlayerState))!;
+        lua["QuestManager"] = (QuestManager)Marshal.PtrToStructure((nint)QuestManager.Instance(), typeof(QuestManager))!;
+        lua["UIState"] = (UIState)Marshal.PtrToStructure((nint)UIState.Instance(), typeof(UIState))!;
 
         script = string.Format(EntrypointTemplate, script);
 
